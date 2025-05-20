@@ -949,7 +949,7 @@ in
             pkgs.writeShellApplication {
               name = "minecraft-server-${name}-start-post";
               text = ''
-                ${msConfig.hooks.postStart}
+                ${lib.optionalString (!conf.lazymc.enable) msConfig.hooks.postStart}
                 ${conf.extraStartPost}
               '';
             }
