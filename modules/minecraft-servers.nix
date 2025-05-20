@@ -167,7 +167,7 @@ let
             ${tmux} -S ${sock} server-access -aw nobody
           '';
           postStart = ''
-            ${pkgs.coreutils}/bin/chmod 660 ${sock}
+            chmod 660 ${sock}
           '';
           stop = ''
             function server_running {
@@ -673,7 +673,7 @@ in
             public.address = effectivePublicAddress;
             server = {
               address = effectiveLazymcInternalServerAddress;
-              directory = "${cfg.dataDir}/${name}";
+              directory = "${cfg.dataDir}/${serverName}";
               command = "${getExe serverConf.package} ${serverConf.jvmOpts}";
             };
             rcon = lib.optionalAttrs originalRconIsEnabledForThisServer {
@@ -895,7 +895,7 @@ in
               );
 
               mkLazymcSetup = lib.optionalString conf.lazymc.enable ''
-                ${lib.getExe pkgs.coreutils}/bin/rm -f "lazymc.toml"
+                rm -f "lazymc.toml"
                 ln -sf "${lazymcTomlFile}" "lazymc.toml"
                 ${markManaged "lazymc.toml"}
               '';
