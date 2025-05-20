@@ -608,17 +608,20 @@ in
       getServerOriginalMcRconEnabled = serverConf: serverConf.serverProperties.enable-rcon or false;
       getServerOriginalMcRconPort = serverConf: serverConf.serverProperties."rcon.port" or 25575;
 
-      getLazymcPublicPort = serverConf:
+      getLazymcPublicPort =
+        serverConf:
         let
           parsePort = addrStr: lib.toInt (builtins.elemAt (lib.splitString ":" addrStr) 1);
           originalUserMcPort = getServerOriginalMcPort serverConf;
           # Lazymc's public facing address (string like "0.0.0.0:25565")
-          lazymcPublicAddrConfig = serverConf.lazymc.config.public.address or "0.0.0.0:${toString originalUserMcPort}";
+          lazymcPublicAddrConfig =
+            serverConf.lazymc.config.public.address or "0.0.0.0:${toString originalUserMcPort}";
         in
         parsePort lazymcPublicAddrConfig;
 
       # Determines if the user has customized lazymc's public or internal server game port in lazymc.config
-      userCustomizedLazymcGamePorts = serverConf:
+      userCustomizedLazymcGamePorts =
+        serverConf:
         serverConf.lazymc.enable
         && (
           ((serverConf.lazymc.config ? public) && (serverConf.lazymc.config.public ? address))
@@ -626,18 +629,21 @@ in
         );
 
       # Port the Minecraft server JAR will be configured to listen on in server.properties
-      getInternalMcPortForServerProperties = serverConf:
-        let originalPort = getServerOriginalMcPort serverConf;
-        in if
-          serverConf.lazymc.enable
-          && !userCustomizedLazymcGamePorts serverConf # User did NOT customize relevant game ports for lazymc
+      getInternalMcPortForServerProperties =
+        serverConf:
+        let
+          originalPort = getServerOriginalMcPort serverConf;
+        in
+        if
+          serverConf.lazymc.enable && !userCustomizedLazymcGamePorts serverConf # User did NOT customize relevant game ports for lazymc
         then
           originalPort - 1 # Default offset
         else
           originalPort; # No lazymc, or user customized lazymc ports, or lazymc won't rewrite.
 
       # The final server.properties attrset to be written to disk
-      getFinalServerPropertiesForMc = serverConf:
+      getFinalServerPropertiesForMc =
+        serverConf:
         let
           internalGamePort = getInternalMcPortForServerProperties serverConf;
         in
@@ -647,14 +653,16 @@ in
         };
 
       # Generates the lazymc.toml file content as a derivation path
-      getLazymcTomlGenerated = serverName: serverConf:
+      getLazymcTomlGenerated =
+        serverName: serverConf:
         let
           originalPort = getServerOriginalMcPort serverConf;
           internalGamePort = getInternalMcPortForServerProperties serverConf; # Port MC Jar listens on
           originalRconIsEnabledForThisServer = getServerOriginalMcRconEnabled serverConf;
           mcJarRconListenPort = getServerOriginalMcRconPort serverConf;
 
-          effectivePublicAddress = serverConf.lazymc.config.public.address or "0.0.0.0:${toString originalPort}";
+          effectivePublicAddress =
+            serverConf.lazymc.config.public.address or "0.0.0.0:${toString originalPort}";
           effectiveLazymcInternalServerAddress =
             if (serverConf.lazymc.config ? server) && (serverConf.lazymc.config.server ? address) then
               serverConf.lazymc.config.server.address
@@ -676,8 +684,8 @@ in
           finalLazymcNixConfig = lib.recursiveUpdate defaultLazymcConfig serverConf.lazymc.config;
         in
         pkgs.writers.writeTOML "lazymc-config-${serverName}.toml" finalLazymcNixConfig;
-      # --- End Helper Functions ---
     in
+    # --- End Helper Functions ---
     {
       users = {
         users.minecraft = mkIf (cfg.user == "minecraft") {
@@ -770,14 +778,18 @@ in
         let
           serversToOpenFirewallFor = filterAttrs (_: serverConf: serverConf.openFirewall) servers;
 
-          tcpPortsToOpen = lib.flatten (lib.mapAttrsToList (serverName: serverConf:
-            if serverConf.lazymc.enable then
-              [ (getLazymcPublicPort serverConf) ]
-            else
-              [ (getServerOriginalMcPort serverConf) ]
-          ) serversToOpenFirewallFor);
+          tcpPortsToOpen = lib.flatten (
+            lib.mapAttrsToList (
+              serverName: serverConf:
+              if serverConf.lazymc.enable then
+                [ (getLazymcPublicPort serverConf) ]
+              else
+                [ (getServerOriginalMcPort serverConf) ]
+            ) serversToOpenFirewallFor
+          );
 
-          udpPortsOrNulls = lib.mapAttrsToList (serverName: serverConf:
+          udpPortsOrNulls = lib.mapAttrsToList (
+            serverName: serverConf:
             if serverConf.serverProperties.enable-query or false then
               # If query is enabled:
               # 1. Use explicit serverConf.serverProperties."query.port" if set.
@@ -981,75 +993,90 @@ in
           value = {
             description = "Minecraft Server ${name}";
             wantedBy = mkIf conf.autoStart [ "multi-user.target" ];
-            requires = optional (!conf.lazymc.enable && conf.managementSystem.systemd-socket.enable) "minecraft-server-${name}.socket";
-            partOf = optional (!conf.lazymc.enable && conf.managementSystem.systemd-socket.enable) "minecraft-server-${name}.socket";
-            after = [ 
-              "network.target"
-            ] ++ optional (!conf.lazymc.enable && conf.managementSystem.systemd-socket.enable) "minecraft-server-${name}.socket";
+            requires = optional (
+              !conf.lazymc.enable && conf.managementSystem.systemd-socket.enable
+            ) "minecraft-server-${name}.socket";
+            partOf = optional (
+              !conf.lazymc.enable && conf.managementSystem.systemd-socket.enable
+            ) "minecraft-server-${name}.socket";
+            after =
+              [
+                "network.target"
+              ]
+              ++ optional (
+                !conf.lazymc.enable && conf.managementSystem.systemd-socket.enable
+              ) "minecraft-server-${name}.socket";
 
             enable = conf.enable;
 
             startLimitIntervalSec = 120;
             startLimitBurst = 5;
 
-            serviceConfig = {
-              inherit
-                ExecStartPre
-                ExecStart
-                ExecStartPost
-                ExecStopPost
-                ExecReload
-                ;
-              ExecStop = "${execStopScript} $MAINPID";
+            serviceConfig =
+              {
+                inherit
+                  ExecStartPre
+                  ExecStart
+                  ExecStartPost
+                  ExecStopPost
+                  ExecReload
+                  ;
+                ExecStop = "${execStopScript} $MAINPID";
 
-              # the Minecraft server (as of 1.20.6) has a 60s timeout for saving each world.
-              # let's let it handle potential lock-ups by itself before resorting to killing it.
-              TimeoutStopSec = "1min 15s";
+                # the Minecraft server (as of 1.20.6) has a 60s timeout for saving each world.
+                # let's let it handle potential lock-ups by itself before resorting to killing it.
+                TimeoutStopSec = "1min 15s";
 
-              Restart = conf.restart;
-              WorkingDirectory = "${cfg.dataDir}/${name}";
-              User = cfg.user;
-              Group = cfg.group;
-              EnvironmentFile = mkIf (cfg.environmentFile != null) (toString cfg.environmentFile);
+                Restart = conf.restart;
+                WorkingDirectory = "${cfg.dataDir}/${name}";
+                User = cfg.user;
+                Group = cfg.group;
+                EnvironmentFile = mkIf (cfg.environmentFile != null) (toString cfg.environmentFile);
 
-              # Default directory for management sockets
-              RuntimeDirectory = "minecraft";
-              RuntimeDirectoryPreserve = "yes";
+                # Default directory for management sockets
+                RuntimeDirectory = "minecraft";
+                RuntimeDirectoryPreserve = "yes";
 
-              # Hardening
-              CapabilityBoundingSet = [ "" ];
-              DeviceAllow = [ "" ];
-              LockPersonality = true;
-              PrivateDevices = true;
-              PrivateTmp = true;
-              PrivateUsers = true;
-              ProtectClock = true;
-              ProtectControlGroups = true;
-              ProtectHome = true;
-              ProtectHostname = true;
-              ProtectKernelLogs = true;
-              ProtectKernelModules = true;
-              ProtectKernelTunables = true;
-              ProtectProc = "invisible";
-              RestrictAddressFamilies = [
-                "AF_UNIX"
-                "AF_INET"
-                "AF_INET6"
-              ];
-              RestrictNamespaces = true;
-              RestrictRealtime = true;
-              RestrictSUIDSGID = true;
-              SystemCallArchitectures = "native";
-              UMask = "0007";
-            } // ( # Conditional part based on lazymc
-                if conf.lazymc.enable then {
-                  Type = "simple";
-                  StandardOutput = "journal";
-                  StandardError = "journal";
-                  # When lazymc is enabled, systemd sends SIGTERM to lazymc on stop,
-                  # and lazymc is responsible for stopping the Minecraft server.
-                  # ExecStop above is set to null.
-                } else msConfig.serviceConfig # Original tmux/systemd-socket config
+                # Hardening
+                CapabilityBoundingSet = [ "" ];
+                DeviceAllow = [ "" ];
+                LockPersonality = true;
+                PrivateDevices = true;
+                PrivateTmp = true;
+                PrivateUsers = true;
+                ProtectClock = true;
+                ProtectControlGroups = true;
+                ProtectHome = true;
+                ProtectHostname = true;
+                ProtectKernelLogs = true;
+                ProtectKernelModules = true;
+                ProtectKernelTunables = true;
+                ProtectProc = "invisible";
+                RestrictAddressFamilies = [
+                  "AF_UNIX"
+                  "AF_INET"
+                  "AF_INET6"
+                ];
+                RestrictNamespaces = true;
+                RestrictRealtime = true;
+                RestrictSUIDSGID = true;
+                SystemCallArchitectures = "native";
+                UMask = "0007";
+              }
+              //
+              # Conditional part based on lazymc
+              (
+                if conf.lazymc.enable then
+                  {
+                    Type = "simple";
+                    StandardOutput = "journal";
+                    StandardError = "journal";
+                    # When lazymc is enabled, systemd sends SIGTERM to lazymc on stop,
+                    # and lazymc is responsible for stopping the Minecraft server.
+                    # ExecStop above is set to null.
+                  }
+                else
+                  msConfig.serviceConfig # Original tmux/systemd-socket config
               );
 
             restartIfChanged = !conf.enableReload;
