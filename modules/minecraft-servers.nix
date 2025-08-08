@@ -569,8 +569,11 @@ in
                   default = { };
                   description = ''
                     Configuration for lazymc, mirroring its TOML structure.
-                    Some values like server command, directory, and internal ports
-                    will be automatically configured by this module when generating lazymc.toml.
+                    Some values like server.command and server.directory will
+                    be automatically configured by this module when generating lazymc.toml. 
+                    
+                    See <link xlink:href="https://github.com/timvisee/lazymc/blob/master/res/lazymc.toml"/>
+                    for documentation on these values.
                   '';
                   example = literalExpression ''
                     {
