@@ -556,6 +556,32 @@ in
                 default = { };
                 example = options.services.minecraft-servers.managementSystem.example;
               };
+              lazymc = {
+                enable = mkEnableOpt "Enable lazymc to manage this server.";
+                package = mkOption {
+                  type = types.package;
+                  default = pkgs.lazymc;
+                  defaultText = literalExpression "pkgs.lazymc";
+                  description = "The lazymc package to use.";
+                };
+                config = mkOption {
+                  type = types.attrs;
+                  default = { };
+                  description = ''
+                    Configuration for lazymc, mirroring its TOML structure.
+                    Some values like server command, directory, and internal ports
+                    will be automatically configured by this module when generating lazymc.toml.
+                  '';
+                  example = literalExpression ''
+                    {
+                      public.address = "0.0.0.0:25565"; # Public port for players
+                      time.sleep_after = 900; # Sleep after 15 minutes
+                      motd.sleeping = "Shhh, the server is napping!";
+                      server.forge = false; # Set to true if this is a Forge server
+                    }
+                  '';
+                };
+              };
             };
           }
         )
