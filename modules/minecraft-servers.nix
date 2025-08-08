@@ -151,6 +151,11 @@ let
     let
       ms = server.managementSystem;
       tmux = "${getBin pkgs.tmux}/bin/tmux";
+      runCommand =
+        if server.lazymc.enable then
+          "${server.lazymc.package}/bin/lazymc start --config lazymc.toml"
+        else
+          "${getExe server.package} ${server.jvmOpts}";
     in
     assert assertMsg (
       !(ms.tmux.enable && ms.systemd-socket.enable)
@@ -166,7 +171,7 @@ let
         };
         hooks = {
           start = ''
-            ${tmux} -S ${sock} new -d ${getExe server.package} ${server.jvmOpts}
+            ${tmux} -S ${sock} new -d ${runCommand}
 
             # HACK: PrivateUsers makes every user besides root/minecraft `nobody`, so this restores old tmux behavior
             # See https://github.com/Infinidoge/nix-minecraft/issues/5
@@ -200,7 +205,7 @@ let
         };
         hooks = {
           start = ''
-            ${getExe server.package} ${server.jvmOpts}
+            ${runCommand}
           '';
           postStart = "";
           stop = ''
@@ -571,7 +576,7 @@ in
                     Configuration for lazymc, mirroring its TOML structure.
                     Some values like server.command and server.directory will
                     be automatically configured by this module when generating lazymc.toml. 
-                    
+
                     See <link xlink:href="https://github.com/timvisee/lazymc/blob/master/res/lazymc.toml"/>
                     for documentation on these values.
                   '';
@@ -719,6 +724,12 @@ in
                 bypassesPlayerLimit = v.bypassesPlayerLimit;
               }) conf.operators;
               "server.properties".value = conf.serverProperties;
+              "lazymc.toml".value = lib.recursiveUpdate { 
+                server = { 
+                  command = "${getExe conf.package} ${conf.jvmOpts}"; 
+                  directory = "."; 
+                }; 
+              } conf.lazymc.config;
             }
             // conf.files
           );
