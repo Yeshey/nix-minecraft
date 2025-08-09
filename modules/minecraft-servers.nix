@@ -632,14 +632,27 @@ in
         {
           assertion =
             let
-              serverPorts = mapAttrsToList (name: conf: conf.serverProperties.server-port or 25565) (
-                filterAttrs (_: cfg: cfg.openFirewall) servers
-              );
+              serverPorts = mapAttrsToList (
+                name: conf:
+
+                  # per server asserts
+                  assert assertMsg (
+                    !(conf.lazymc.enable && !(conf.lazymc.config ? public && conf.lazymc.config.public ? address))
+                  ) ''
+                    Server '${name}' has Lazymc enabled but no public address set. Please set for example: ${name}.lazymc.config.public.address = "0.0.0.0:25566";
+                    Lazymc's internal server.address is automatically set to ${name}.serverProperties.server-port or 25565
+                    '';
+
+                if conf.lazymc.enable then
+                  lib.toInt (lib.last (lib.splitString ":" conf.lazymc.config.public.address)) # turn 0.0.0.0:25566 to 25566
+                else
+                  conf.serverProperties.server-port or 25565
+              ) (filterAttrs (_: cfg: cfg.openFirewall) servers);
 
               counts = map (port: count (x: x == port) serverPorts) (unique serverPorts);
             in
             lib.all (x: x == 1) counts;
-          message = "Multiple servers are set to use the same port. Change one to use a different port.";
+          message = "Multiple servers are set to use the same public port (either through lazymc public.address or server.properties server-port). Change one to use a different port.";
         }
       ];
 
@@ -658,7 +671,14 @@ in
           # Minecraft and RCON
           getTCPPorts =
             n: c:
-            [ c.serverProperties.server-port or 25565 ]
+            [
+              (
+                if c.lazymc.enable then
+                  lib.toInt (lib.last (lib.splitString ":" c.lazymc.config.public.address)) # turn 0.0.0.0:25566 to 25566
+                else
+                  c.serverProperties.server-port or 25565
+              )
+            ]
             ++ (optional (c.serverProperties.enable-rcon or false) (c.serverProperties."rcon.port" or 25575));
           # Query
           getUDPPorts =
@@ -724,11 +744,12 @@ in
                 bypassesPlayerLimit = v.bypassesPlayerLimit;
               }) conf.operators;
               "server.properties".value = conf.serverProperties;
-              "lazymc.toml".value = lib.recursiveUpdate { 
-                server = { 
-                  command = "${getExe conf.package} ${conf.jvmOpts}"; 
-                  directory = "."; 
-                }; 
+              "lazymc.toml".value = lib.recursiveUpdate {
+                server = {
+                  command = "${getExe conf.package} ${conf.jvmOpts}";
+                  directory = ".";
+                  address = "127.0.0.1:${toString conf.serverProperties.server-port or 25565}";
+                };
               } conf.lazymc.config;
             }
             // conf.files
