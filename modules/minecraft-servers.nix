@@ -183,13 +183,18 @@ let
               exit 0
             fi
 
-            ${if server.lazymc.enable then ''
-              # Won't gracefully stop if server running unfortunately
-              ${tmux} -S ${sock} send-keys C-c Enter
-              ${tmux} -S ${sock} send-keys C-c Enter
-            '' else ''
-              ${tmux} -S ${sock} send-keys ${escapeShellArg server.stopCommand} Enter
-            ''}
+            ${
+              if server.lazymc.enable then
+                ''
+                  # Won't gracefully stop if server running unfortunately
+                  ${tmux} -S ${sock} send-keys C-c Enter
+                  ${tmux} -S ${sock} send-keys C-c Enter
+                ''
+              else
+                ''
+                  ${tmux} -S ${sock} send-keys ${escapeShellArg server.stopCommand} Enter
+                ''
+            }
 
             while server_running; do sleep 1s; done
           '';
@@ -651,13 +656,13 @@ in
               serverPorts = mapAttrsToList (
                 name: conf:
 
-                  # per server asserts
-                  assert assertMsg (
-                    !(conf.lazymc.enable && !(conf.lazymc.config ? public && conf.lazymc.config.public ? address))
-                  ) ''
+                # per server asserts
+                assert assertMsg
+                  (!(conf.lazymc.enable && !(conf.lazymc.config ? public && conf.lazymc.config.public ? address)))
+                  ''
                     Server '${name}' has Lazymc enabled but no public address set. Please set for example: ${name}.lazymc.config.public.address = "0.0.0.0:25566";
                     Lazymc's internal server.address is automatically set to ${name}.serverProperties.server-port or 25565
-                    '';
+                  '';
 
                 if conf.lazymc.enable then
                   lib.toInt (lib.last (lib.splitString ":" conf.lazymc.config.public.address)) # turn 0.0.0.0:25566 to 25566
