@@ -189,7 +189,13 @@ let
               exit 0
             fi
 
-            ${tmux} -S ${sock} send-keys C-u ${escapeShellArg server.stopCommand} Enter
+            ${if server.lazymc.enable then ''
+              # Won't gracefully stop if server running unfortunately
+              ${tmux} -S ${sock} send-keys C-c Enter
+              ${tmux} -S ${sock} send-keys C-c Enter
+            '' else ''
+              ${tmux} -S ${sock} send-keys ${escapeShellArg server.stopCommand} Enter
+            ''}
 
             while server_running; do sleep 1s; done
           '';
@@ -209,7 +215,7 @@ let
           '';
           postStart = "";
           stop = ''
-            ${optionalString (server.stopCommand != null) ''
+            ${optionalString (server.stopCommand != null && !server.lazymc.enable) ''
               echo ${escapeShellArg server.stopCommand} > ${escapeShellArg (ms.systemd-socket.stdinSocket.path name)}
 
               while kill -0 "$1" 2> /dev/null; do sleep 1s; done
