@@ -506,7 +506,8 @@ generates a legacy `white-list.txt` that is needed for older minecraft versions 
 
 #### `servers.<name>.lazymc`
 
-Integrates [lazymc](https://github.com/timvisee/lazymc), putting server to sleep when idle and waking it upon player connection.
+Integrates [lazymc](https://github.com/timvisee/lazymc), putting server to sleep when idle and waking it upon player connection.  
+When enabled the server's public address is controlled by lazymc, by default 25565. So a new internal `serverProperties.server-port` has to be chosen.
 
 *   **`enable`**: `boolean`, default `false`
 
@@ -520,7 +521,7 @@ Integrates [lazymc](https://github.com/timvisee/lazymc), putting server to sleep
     *   `server.address`: Automatically set to `127.0.0.1:<serverProperties.server-port or 25565>";`
 
     **Firewall**
-    *   When `lazymc.enable = true`, the  `openFirewall` option for this server instance will open the port specified in `lazymc.config.public.address` (or its default), not the internal Minecraft `serverProperties.server-port`.
+    *   When `lazymc.enable = true`, the  `openFirewall` option for this server instance will open the port specified in `lazymc.config.public.address` (or 25565), not the internal Minecraft `serverProperties.server-port`.
 
     **Example:**
     ```nix
