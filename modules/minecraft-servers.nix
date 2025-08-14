@@ -621,6 +621,17 @@ in
   config = mkIf cfg.enable (
     let
       servers = filterAttrs (_: cfg: cfg.enable) cfg.servers;
+
+      getPublicPort =
+        _: conf:
+        if conf.lazymc.enable then
+          let
+            addr = conf.lazymc.config.public.address or "0.0.0.0:25565";
+            portStr = lib.last (lib.splitString ":" addr);
+          in
+          lib.toInt portStr
+        else
+          conf.serverProperties.server-port or 25565;
     in
     {
       users = {
@@ -658,16 +669,14 @@ in
 
                 # per server asserts
                 assert assertMsg
-                  (!(conf.lazymc.enable && !(conf.lazymc.config ? public && conf.lazymc.config.public ? address)))
+                  (!(conf.lazymc.enable && getPublicPort _ conf == (conf.serverProperties.server-port or 25565)))
                   ''
-                    Server '${name}' has Lazymc enabled but no public address set. Please set for example: ${name}.lazymc.config.public.address = "0.0.0.0:25566";
-                    Lazymc's internal server.address is automatically set to ${name}.serverProperties.server-port or 25565
+                    Server '${name}' has the same port set for serverProperties.server-port and lazymc.config.public.address
+                    Please set for example: `${name}.serverProperties.server-port = 25566;`, lazymc's internal server.address will automatically point to it
+                    Lazymc's public.address is "0.0.0.0:25565" by default
                   '';
 
-                if conf.lazymc.enable then
-                  lib.toInt (lib.last (lib.splitString ":" conf.lazymc.config.public.address)) # turn 0.0.0.0:25566 to 25566
-                else
-                  conf.serverProperties.server-port or 25565
+                getPublicPort _ conf
               ) (filterAttrs (_: cfg: cfg.openFirewall) servers);
 
               counts = map (port: count (x: x == port) serverPorts) (unique serverPorts);
@@ -693,12 +702,7 @@ in
           getTCPPorts =
             n: c:
             [
-              (
-                if c.lazymc.enable then
-                  lib.toInt (lib.last (lib.splitString ":" c.lazymc.config.public.address)) # turn 0.0.0.0:25566 to 25566
-                else
-                  c.serverProperties.server-port or 25565
-              )
+              (getPublicPort n c)
             ]
             ++ (optional (c.serverProperties.enable-rcon or false) (c.serverProperties."rcon.port" or 25575));
           # Query
