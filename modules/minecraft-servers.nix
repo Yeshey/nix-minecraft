@@ -192,7 +192,7 @@ let
             ${
               if server.lazymc.enable then
                 ''
-                  # Won't gracefully stop if server running unfortunately
+                  # Won't gracefully stop if server is running unfortunately
                   ${tmux} -S ${sock} send-keys C-c Enter
                   ${tmux} -S ${sock} send-keys C-c Enter
                 ''
@@ -573,7 +573,7 @@ in
                 example = options.services.minecraft-servers.managementSystem.example;
               };
               lazymc = {
-                enable = mkEnableOpt "Enable lazymc to manage this server.";
+                enable = mkEnableOpt "Puts your Minecraft server to rest when idle, and wakes it up when players connect.";
                 package = mkOption {
                   type = types.package;
                   default = pkgs.lazymc;
@@ -585,7 +585,7 @@ in
                   default = { };
                   description = ''
                     Configuration for lazymc, mirroring its TOML structure.
-                    Some values like server.command and server.directory will
+                    Some values like server.command, server.directory and server.address will
                     be automatically configured by this module when generating lazymc.toml. 
 
                     See <link xlink:href="https://github.com/timvisee/lazymc/blob/master/res/lazymc.toml"/>
