@@ -518,7 +518,7 @@ When enabled the server's public address is controlled by lazymc, by default 255
           enable = true;
           package = pkgs.paperServers.paper-1_18_2;
           serverProperties = {
-            "server-port" = 25565;
+            "server-port" = 25566;
             "max-tick-time" = -1; # Recommended with lazymc
           };
 
@@ -532,7 +532,7 @@ When enabled the server's public address is controlled by lazymc, by default 255
               }) { inherit (pkgs) system; };
             in pkgs-with-lazymc_0_2_10.lazymc;
             config = {
-              public.address = "0.0.0.0:25566";
+              public.address = "0.0.0.0:25565";
             };
           };
         };
