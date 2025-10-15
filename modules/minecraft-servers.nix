@@ -759,6 +759,8 @@ in
                 bypassesPlayerLimit = v.bypassesPlayerLimit;
               }) conf.operators;
               "server.properties".value = conf.serverProperties;
+            } 
+            // (optionalAttrs conf.lazymc.enable {
               "lazymc.toml".value = lib.recursiveUpdate {
                 server = {
                   command = "${getExe conf.package} ${conf.jvmOpts}";
@@ -766,7 +768,7 @@ in
                   address = "127.0.0.1:${toString conf.serverProperties.server-port or 25565}";
                 };
               } conf.lazymc.config;
-            }
+            })
             // conf.files
           );
 
