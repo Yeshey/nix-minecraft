@@ -654,26 +654,35 @@ in
         {
           assertion =
             let
-              serverPorts = mapAttrsToList (
-                name: conf:
-
-                # per server asserts
-                assert assertMsg
-                  (!(conf.lazymc.enable && getPublicPort _ conf == (conf.serverProperties.server-port or 25565)))
-                  ''
-                    Server '${name}' has the same port set for serverProperties.server-port and lazymc.config.public.address
-                    Please set for example: `${name}.serverProperties.server-port = 25566;`, lazymc's internal server.address will automatically point to it
-                    Lazymc's public.address is "0.0.0.0:25565" by default
-                  '';
-
-                getPublicPort _ conf
-              ) (filterAttrs (_: cfg: cfg.openFirewall) servers);
+              serverPorts = mapAttrsToList ( name: conf: getPublicPort _ conf) 
+                (filterAttrs (_: cfg: cfg.openFirewall) servers);
 
               counts = map (port: count (x: x == port) serverPorts) (unique serverPorts);
             in
             lib.all (x: x == 1) counts;
           message = "Multiple servers are set to use the same public port (either through lazymc public.address or server.properties server-port). Change one to use a different port.";
         }
+        (
+          let
+            # Compute lazymc port conflicts once
+            lazymcPortConflicts = filter (x: x.hasConflict) (
+              mapAttrsToList (
+                name: conf: {
+                  inherit name;
+                  hasConflict = conf.lazymc.enable && getPublicPort _ conf == (conf.serverProperties.server-port or 25565);
+                }
+              ) servers
+            );
+            conflictingServerNames = map (x: x.name) lazymcPortConflicts;
+          in
+          {
+          assertion = lazymcPortConflicts == [];
+          message = ''
+            Server(s): ${concatStringsSep ", " conflictingServerNames} has the same port set for serverProperties.server-port and lazymc.config.public.address
+            Please set for example: `serverName.serverProperties.server-port = 25566;`, lazymc's internal server.address will automatically point to it
+            Lazymc's public.address is "0.0.0.0:25565" by default
+          '';
+        })
       ];
 
       warnings = lib.optional (cfg.runDir != options.services.minecraft-servers.runDir.default) ''
