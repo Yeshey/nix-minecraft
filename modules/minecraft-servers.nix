@@ -192,7 +192,6 @@ let
             ${
               if server.lazymc.enable then
                 ''
-                  # Won't gracefully stop if server is running unfortunately
                   ${tmux} -S ${sock} send-keys C-c Enter
                   ${tmux} -S ${sock} send-keys C-c Enter
                 ''
