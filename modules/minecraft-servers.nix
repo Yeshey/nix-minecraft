@@ -181,27 +181,19 @@ let
             ${pkgs.coreutils}/bin/chmod 660 ${sock}
           '';
           stop = ''
-            function server_running {
-              ${tmux} -S ${sock} has-session
-            }
+            ${optionalString (!server.lazymc.enable) ''
+              function server_running {
+                ${tmux} -S ${sock} has-session
+              }
 
-            if ! server_running ; then
-              exit 0
-            fi
+              if ! server_running ; then
+                exit 0
+              fi
 
-            ${
-              if server.lazymc.enable then
-                ''
-                  ${tmux} -S ${sock} send-keys C-c Enter
-                  ${tmux} -S ${sock} send-keys C-c Enter
-                ''
-              else
-                ''
-                  ${tmux} -S ${sock} send-keys ${escapeShellArg server.stopCommand} Enter
-                ''
-            }
+              ${tmux} -S ${sock} send-keys C-u ${escapeShellArg server.stopCommand} Enter
 
-            while server_running; do sleep 1s; done
+              while server_running; do sleep 1s; done
+            ''}
           '';
         };
       }
