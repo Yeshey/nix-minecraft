@@ -181,17 +181,17 @@ let
             ${pkgs.coreutils}/bin/chmod 660 ${sock}
           '';
           stop = optionalString (!server.lazymc.enable) ''
-              function server_running {
-                ${tmux} -S ${sock} has-session
-              }
+            function server_running {
+              ${tmux} -S ${sock} has-session
+            }
 
-              if ! server_running ; then
-                exit 0
-              fi
+            if ! server_running ; then
+              exit 0
+            fi
 
-              ${tmux} -S ${sock} send-keys C-u ${escapeShellArg server.stopCommand} Enter
+            ${tmux} -S ${sock} send-keys C-u ${escapeShellArg server.stopCommand} Enter
 
-              while server_running; do sleep 1s; done
+            while server_running; do sleep 1s; done
           '';
         };
       }
@@ -568,7 +568,24 @@ in
                   description = "The lazymc package to use.";
                 };
                 config = mkOption {
-                  type = types.attrs;
+                  type = types.submodule {
+                    freeformType = types.attrs;
+                    options = {
+                      public = mkOption {
+                        type = types.submodule {
+                          freeformType = types.attrs;
+                          options = {
+                            address = mkOption {
+                              type = types.strMatching "^[^:]+:[0-9]+$";
+                              default = "0.0.0.0:25565";
+                              description = "Public address in format 'address:port'";
+                            };
+                          };
+                        };
+                        default = { };
+                      };
+                    };
+                  };
                   default = { };
                   description = ''
                     Configuration for lazymc, mirroring its TOML structure.
