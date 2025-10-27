@@ -600,7 +600,7 @@ in
       servers = filterAttrs (_: cfg: cfg.enable) cfg.servers;
 
       getPublicPort =
-        _: conf:
+        conf:
         if conf.lazymc.enable then
           let
             addr = conf.lazymc.config.public.address or "0.0.0.0:25565";
@@ -641,7 +641,7 @@ in
         {
           assertion =
             let
-              serverPorts = mapAttrsToList (name: conf: getPublicPort _ conf) (
+              serverPorts = mapAttrsToList (name: conf: getPublicPort conf) (
                 filterAttrs (_: cfg: cfg.openFirewall) servers
               );
 
@@ -656,7 +656,7 @@ in
               mapAttrsToList (name: conf: {
                 inherit name;
                 hasConflict =
-                  conf.lazymc.enable && getPublicPort _ conf == (conf.serverProperties.server-port or 25565);
+                  conf.lazymc.enable && getPublicPort conf == (conf.serverProperties.server-port or 25565);
               }) servers
             );
             conflictingServerNames = map (x: x.name) lazymcPortConflicts;
@@ -688,7 +688,7 @@ in
           getTCPPorts =
             n: c:
             [
-              (getPublicPort n c)
+              (getPublicPort c)
             ]
             ++ (optional (c.serverProperties.enable-rcon or false) (c.serverProperties."rcon.port" or 25575));
           # Query
