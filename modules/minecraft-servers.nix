@@ -180,8 +180,7 @@ let
           postStart = ''
             ${pkgs.coreutils}/bin/chmod 660 ${sock}
           '';
-          stop = ''
-            ${optionalString (!server.lazymc.enable) ''
+          stop = optionalString (!server.lazymc.enable) ''
               function server_running {
                 ${tmux} -S ${sock} has-session
               }
@@ -193,7 +192,6 @@ let
               ${tmux} -S ${sock} send-keys C-u ${escapeShellArg server.stopCommand} Enter
 
               while server_running; do sleep 1s; done
-            ''}
           '';
         };
       }
