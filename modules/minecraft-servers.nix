@@ -204,9 +204,7 @@ let
           StandardError = "journal";
         };
         hooks = {
-          start = ''
-            ${runCommand}
-          '';
+          start = runCommand;
           postStart = "";
           stop = ''
             ${optionalString (server.stopCommand != null && !server.lazymc.enable) ''
