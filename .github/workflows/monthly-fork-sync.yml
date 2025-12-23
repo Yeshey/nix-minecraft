@@ -50,8 +50,8 @@ jobs:
       
       - name: Reset master to upstream/master
         run: |
-          git checkout master
-          git reset --hard upstream/master
+          git checkout -B master upstream/master
+          git branch --set-upstream-to=origin/master master
       
       - name: Squash merge development (excluding workflow)
         run: |
@@ -61,6 +61,10 @@ jobs:
           # Reset the workflow file to exclude it from the merge
           git reset HEAD .github/workflows/monthly-fork-sync.yml || true
           git checkout HEAD .github/workflows/monthly-fork-sync.yml || true
+          
+          # Also exclude the upstream's update-locks.yml if it exists
+          git reset HEAD .github/workflows/update-locks.yml || true
+          git checkout HEAD .github/workflows/update-locks.yml || true
       
       - name: Commit squashed changes
         run: |
