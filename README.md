@@ -1,19 +1,5 @@
 # nix-minecraft
 
-This fork adds `lazymc` option to have on-demand Minecraft servers.
-
-## Note to self
-
-Rebase master: 
-```
-git fetch upstream
-git checkout master
-git reset --hard upstream/master
-git merge --squash development
-git commit -m "Add LazyMC support"
-git push origin master --force-with-lease
-```
-
 ## About
 
 `nix-minecraft` is an attempt to better package and support Minecraft as part of the Nix ecosystem, focusing on the server-side.
