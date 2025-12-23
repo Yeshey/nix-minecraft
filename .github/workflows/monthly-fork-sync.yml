@@ -64,9 +64,7 @@ jobs:
       
       - name: Commit squashed changes
         run: |
-          git commit -m "Add LazyMC support
-
-Squashed commit of development branch rebased on upstream/master"
+          git commit -m "Add LazyMC support"
       
       - name: Force push master
         run: |
