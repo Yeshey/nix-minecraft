@@ -6,16 +6,45 @@ on:
   workflow_dispatch: # Allow manual triggering
 
 jobs:
-  sync-and-update:
+  sync-development:
     runs-on: ubuntu-latest
-    # Extra safety: only run on your fork
+    if: github.repository == 'Yeshey/nix-minecraft'
+    
+    steps:
+      - name: Checkout development branch
+        uses: actions/checkout@v4
+        with:
+          ref: development
+          fetch-depth: 0
+          persist-credentials: true
+      
+      - name: Sync development with upstream/master
+        id: sync_dev
+        uses: aormsby/Fork-Sync-With-Upstream-action@v3.4.1
+        with:
+          target_sync_branch: development
+          target_repo_token: ${{ secrets.GITHUB_TOKEN }}
+          upstream_sync_branch: master
+          upstream_sync_repo: Infinidoge/nix-minecraft
+      
+      - name: Display sync result
+        run: |
+          if [ "${{ steps.sync_dev.outputs.has_new_commits }}" == "true" ]; then
+            echo "✅ Development synced successfully with new commits"
+          else
+            echo "ℹ️ Development already up to date"
+          fi
+
+  squash-to-master:
+    needs: sync-development
+    runs-on: ubuntu-latest
     if: github.repository == 'Yeshey/nix-minecraft'
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Fetch full history for rebase
+          fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Configure Git
@@ -23,59 +52,53 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
       
-      - name: Add upstream remote
+      - name: Set up remotes
         run: |
           git remote add upstream https://github.com/Infinidoge/nix-minecraft.git || true
           git fetch upstream
           git fetch origin
       
-      - name: Rebase development on upstream/master
-        id: rebase_dev
+      - name: Create new master from upstream
         run: |
-          git checkout development
-          git rebase upstream/master
-        continue-on-error: true
-      
-      - name: Check rebase status
-        if: steps.rebase_dev.outcome == 'failure'
-        run: |
-          echo "::error::Rebase failed! Manual intervention required."
-          echo "Conflict files:"
-          git diff --name-only --diff-filter=U
-          exit 1
-      
-      - name: Push rebased development
-        run: |
-          git push origin development --force-with-lease
-      
-      - name: Reset master to upstream/master
-        run: |
-          git checkout -B master upstream/master
+          # Delete local master if it exists
+          git branch -D master 2>/dev/null || true
+          
+          # Create fresh master from upstream/master
+          git checkout -b master upstream/master
+          
+          # Set tracking to origin/master
           git branch --set-upstream-to=origin/master master
       
-      - name: Squash merge development (excluding workflow)
+      - name: Squash merge development (excluding this workflow)
         run: |
           # Squash merge without committing
-          git merge --squash development
+          git merge --squash origin/development
           
-          # Reset the workflow file to exclude it from the merge
-          git reset HEAD .github/workflows/monthly-fork-sync.yml || true
-          git checkout HEAD .github/workflows/monthly-fork-sync.yml || true
-          
-          # Also exclude the upstream's update-locks.yml if it exists
-          git reset HEAD .github/workflows/update-locks.yml || true
-          git checkout HEAD .github/workflows/update-locks.yml || true
+          # If this workflow exists in development, exclude it from the merge
+          if git ls-tree --name-only origin/development .github/workflows/monthly-fork-sync.yml | grep -q .; then
+            git reset HEAD .github/workflows/monthly-fork-sync.yml 2>/dev/null || true
+            git checkout upstream/master -- .github/workflows/monthly-fork-sync.yml 2>/dev/null || true
+          fi
       
       - name: Commit squashed changes
         run: |
-          git commit -m "Add LazyMC support"
+          # Check if there are changes to commit
+          if git diff --cached --quiet; then
+            echo "No changes to commit - master is already up to date"
+            echo "SKIP_PUSH=true" >> $GITHUB_ENV
+          else
+            git commit -m "Add LazyMC support"
+          fi
       
       - name: Force push master
+        if: env.SKIP_PUSH != 'true'
         run: |
           git push origin master --force-with-lease
       
-      - name: Notify on failure
-        if: failure()
+      - name: Summary
         run: |
-          echo "::error::Workflow failed! Check the logs for details."
-          echo "You may need to manually resolve conflicts and push."
+          if [ "$SKIP_PUSH" == "true" ]; then
+            echo "✅ Workflow complete - no changes needed"
+          else
+            echo "✅ Workflow complete - master updated successfully"
+          fi
