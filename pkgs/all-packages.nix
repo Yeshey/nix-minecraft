@@ -23,7 +23,9 @@ rec {
   quiltServers = callPackage ./quilt-servers { inherit vanillaServers; };
   legacyFabricServers = callPackage ./legacy-fabric-servers { inherit vanillaServers; };
   paperServers = callPackage ./paper-servers { inherit vanillaServers; };
+  purpurServers = callPackage ./purpur-servers { inherit vanillaServers; };
   velocityServers = callPackage ./velocity-servers { };
+  neoforgeServers = callPackage ./neoforge-servers { inherit vanillaServers; };
 
   minecraftServers = lib.mergeAttrsList [
     vanillaServers
@@ -31,13 +33,17 @@ rec {
     quiltServers
     legacyFabricServers
     paperServers
+    purpurServers
+    neoforgeServers
   ];
 
   vanilla-server = vanillaServers.vanilla;
   fabric-server = fabricServers.fabric;
   quilt-server = quiltServers.quilt;
   paper-server = paperServers.paper;
+  purpur-server = purpurServers.purpur;
   velocity-server = velocityServers.velocity;
   minecraft-server = vanilla-server;
+  neoforge-server = neoforgeServers.neoforge;
 }
 // (builtins.mapAttrs (n: v: callPackage v { }) (lib.our.rakeLeaves ./tools))
